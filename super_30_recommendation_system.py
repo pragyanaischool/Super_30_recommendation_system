@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 import requests
-import math # Import the math library to handle NaN values
+import numpy as np # 1. Import numpy
 
 # --- Page Configuration ---
 st.set_page_config(layout="wide")
@@ -42,9 +42,8 @@ def get_recommendations(title, movies_df, cosine_sim):
     
     sim_scores = list(enumerate(cosine_sim[idx].astype(float)))
     
-    # THE FIX IS HERE: Modify the sorting key to handle potential NaN values
-    # We treat NaN scores as negative infinity, so they are ranked last.
-    sim_scores = sorted(sim_scores, key=lambda x: x[1] if not math.isnan(x[1]) else -float('inf'), reverse=True)
+    # 2. THE FIX: Use np.isnan() instead of math.isnan()
+    sim_scores = sorted(sim_scores, key=lambda x: x[1] if not np.isnan(x[1]) else -float('inf'), reverse=True)
     
     sim_scores = sim_scores[1:11]
     movie_indices = [i[0] for i in sim_scores]
@@ -88,4 +87,3 @@ if movies_df is not None and cosine_sim is not None:
 else:
     st.error("🚨 Model files not found!")
     st.warning("Please run the updated training script first to generate 'movies_df.joblib'.")
-    
