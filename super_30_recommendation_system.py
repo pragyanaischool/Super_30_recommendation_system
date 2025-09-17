@@ -63,7 +63,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🎬 Movie Recommender System")
+st.title("PragyanAI - Super 30 Movie Recommender System")
 movies_df, cosine_sim = load_model_assets()
 
 if movies_df is not None and cosine_sim is not None:
