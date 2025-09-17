@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 import requests
+import math # Import the math library to handle NaN values
 
 # --- Page Configuration ---
 st.set_page_config(layout="wide")
@@ -39,10 +40,12 @@ def get_recommendations(title, movies_df, cosine_sim):
     indices = pd.Series(movies_df.index, index=movies_df['title'])
     idx = indices[title]
     
-    # THE FIX IS HERE: Convert the float16 scores to a standard float before sorting
     sim_scores = list(enumerate(cosine_sim[idx].astype(float)))
     
-    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+    # THE FIX IS HERE: Modify the sorting key to handle potential NaN values
+    # We treat NaN scores as negative infinity, so they are ranked last.
+    sim_scores = sorted(sim_scores, key=lambda x: x[1] if not math.isnan(x[1]) else -float('inf'), reverse=True)
+    
     sim_scores = sim_scores[1:11]
     movie_indices = [i[0] for i in sim_scores]
     return movies_df['title'].iloc[movie_indices], movies_df['id'].iloc[movie_indices]
