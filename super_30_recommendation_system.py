@@ -20,8 +20,7 @@ def fetch_poster(movie_id):
         if poster_path:
             return "https://image.tmdb.org/t/p/w500/" + poster_path
     except Exception as e:
-        # Avoid showing detailed errors to the end-user
-        print(f"Error fetching poster: {e}")
+        print(f"Error fetching poster: {e}") # Log error for debugging
     return "https://via.placeholder.com/500x750.png?text=No+Poster+Found"
 
 # --- Function to load saved model assets ---
@@ -40,26 +39,21 @@ def get_recommendations(title, movies_df, cosine_sim):
     """Generates movie recommendations for a given title."""
     indices = pd.Series(movies_df.index, index=movies_df['title'])
     idx = indices[title]
+    sim_scores = list(enumerate(cosine_sim[idx].astype(float)))
     
-    sim_scores = list(enumerate(cosine_sim[idx]))
-    
-    # THE FIX: A robust sorting key to handle any invalid data
     def robust_sort_key(item):
         score = item[1]
-        # Check if score is a valid, finite number. If not, treat as lowest value.
         if isinstance(score, (int, float, np.number)) and np.isfinite(score):
             return score
         else:
             return -float('inf')
 
     sim_scores = sorted(sim_scores, key=robust_sort_key, reverse=True)
-    
     sim_scores = sim_scores[1:11]
     movie_indices = [i[0] for i in sim_scores]
     return movies_df['title'].iloc[movie_indices], movies_df['id'].iloc[movie_indices]
 
 # --- Custom CSS and UI ---
-# (Your CSS and UI code remains the same)
 st.markdown("""
 <style>
     .stApp { background-color: #0E1117; color: #FAFAFA; }
@@ -81,20 +75,22 @@ if movies_df is not None and cosine_sim is not None:
         if selected_movie:
             with st.spinner('Curating a list of movies just for you...'):
                 rec_titles, rec_ids = get_recommendations(selected_movie, movies_df, cosine_sim)
-                st.subheader(f"Because you watched '{selected_movie}', you might like...")
                 
-                cols = st.columns(5)
-                for i in range(5):
-                    with cols[i]:
-                        st.image(fetch_poster(rec_ids.iloc[i]))
-                        st.markdown(f"<p class='movie-title'>{rec_titles.iloc[i]}</p>", unsafe_allow_html=True)
-
-                cols = st.columns(5)
-                for i in range(5, 10):
-                     with cols[i-5]:
-                        st.image(fetch_poster(rec_ids.iloc[i]))
-                        st.markdown(f"<p class='movie-title'>{rec_titles.iloc[i]}</p>", unsafe_allow_html=True)
+                # THE FIX IS HERE: Check the number of recommendations before displaying
+                num_recs = len(rec_titles)
+                
+                if num_recs > 0:
+                    st.subheader(f"Because you watched '{selected_movie}', you might like...")
+                    
+                    # Create a dynamic grid that adapts to the number of recommendations
+                    cols = st.columns(5)
+                    for i in range(num_recs):
+                        col = cols[i % 5]
+                        with col:
+                            st.image(fetch_poster(rec_ids.iloc[i]))
+                            st.markdown(f"<p class='movie-title'>{rec_titles.iloc[i]}</p>", unsafe_allow_html=True)
+                else:
+                    st.warning("Could not find any similar movies.")
 else:
     st.error("🚨 Model files not found!")
-    st.warning("Please run the updated training script first to generate 'movies_df.joblib'.")
-    
+    st.warning("Please run the updated training script first.")
